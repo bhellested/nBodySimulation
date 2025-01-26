@@ -6,19 +6,19 @@ import { OrbitControls } from "@react-three/drei";
 import { Line } from "@react-three/drei";
 
 function PhysicsSystem({
-  bodies,
-  setBodies,
+  bodiesRef,
   G,
   paused,
   enableCollision,
   restitution,
+  forceUpdate,
 }: {
-  bodies: Body[];
-  setBodies: (bodies: Body[]) => void;
+  bodiesRef: React.MutableRefObject<Body[]>;
   G: number;
   paused: boolean;
   enableCollision: boolean;
   restitution: number;
+  forceUpdate: React.Dispatch<React.SetStateAction<number>>;
 }) {
   const frame = useRef(0);
   useFrame((_, delta) => {
@@ -26,20 +26,20 @@ function PhysicsSystem({
 
     frame.current++;
 
-    const newBodies = [...bodies];
+    const newBodies = [...bodiesRef.current];
 
     //process all physics for all bodies in one place
-    for (let i = 0; i < bodies.length; i++) {
-      const body = bodies[i];
+    for (let i = 0; i < bodiesRef.current.length; i++) {
+      const body = bodiesRef.current[i];
       const trail = [...body.trail];
       const pos = new THREE.Vector3(...body.position);
       const collidedVel = new THREE.Vector3(...body.velocity);
       const nonCollidedVel = collidedVel.clone();
       let collided = false;
       //check collisions with all other bodies
-      for (let j = 0; j < bodies.length; j++) {
+      for (let j = 0; j < bodiesRef.current.length; j++) {
         if (i === j) continue;
-        const otherBody = bodies[j];
+        const otherBody = bodiesRef.current[j];
         const otherPos = new THREE.Vector3(...otherBody.position);
         const directionFromOtherBody = otherPos.clone().sub(pos);
         const distanceBetweenBodies = directionFromOtherBody.length();
@@ -85,7 +85,7 @@ function PhysicsSystem({
           //when collision is disabled, we want to ignore the gravity inside most of the collision radius because it gets too strong
           if (
             !enableCollision &&
-            distanceBetweenBodies < distanceToCollision * 0.8
+            distanceBetweenBodies < distanceToCollision * 0.6
           ) {
             continue;
           }
@@ -118,9 +118,10 @@ function PhysicsSystem({
           : [nonCollidedVel.x, nonCollidedVel.y, nonCollidedVel.z],
         trail,
       };
+      forceUpdate((prev) => prev + 1);
     }
 
-    setBodies(newBodies);
+    bodiesRef.current = newBodies;
   });
 
   return null;
@@ -162,7 +163,7 @@ type Body = {
 };
 
 function App() {
-  const [bodies, setBodies] = useState<Body[]>([
+  const bodiesRef = useRef<Body[]>([
     {
       position: [(Math.random() - 0.5) * 10, (Math.random() - 0.5) * 10, (Math.random() - 0.5) * 10],
       velocity: [(Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2],
@@ -204,6 +205,7 @@ function App() {
     "gray",
     "white",
   ];
+  const [_, forceUpdate] = useState(0); //only trigger re-renders when necessary
 
   return (
     <>
@@ -213,28 +215,26 @@ function App() {
             className="bg-blue-500 text-white p-2 rounded-md"
             onClick={() => {
               //adds a single body with random position and velocity
-              setBodies([
-                ...bodies,
-                {
-                  position: [
-                    (Math.random() - 0.5) * 10,
-                    (Math.random() - 0.5) * 10,
-                    (Math.random() - 0.5) * 10,
+              bodiesRef.current.push({
+                position: [
+                  (Math.random() - 0.5) * 10,
+                  (Math.random() - 0.5) * 10,
+                  (Math.random() - 0.5) * 10,
+                ],
+                velocity: [
+                  (Math.random() - 0.5) * 2,
+                  (Math.random() - 0.5) * 2,
+                  (Math.random() - 0.5) * 2,
+                ],
+                mass: 1 + Math.random() * 2,
+                radius: 0.3 + Math.random() * 0.7,
+                color:
+                  colorOptions[
+                    Math.floor(Math.random() * colorOptions.length)
                   ],
-                  velocity: [
-                    (Math.random() - 0.5) * 2,
-                    (Math.random() - 0.5) * 2,
-                    (Math.random() - 0.5) * 2,
-                  ],
-                  mass: 1 + Math.random() * 2,
-                  radius: 0.3 + Math.random() * 0.7,
-                  color:
-                    colorOptions[
-                      Math.floor(Math.random() * colorOptions.length)
-                    ],
-                  trail: [],
-                },
-              ]);
+                trail: [],
+              });
+              forceUpdate((prev) => prev + 1);
             }}
           >
             Add Body
@@ -250,7 +250,8 @@ function App() {
           <button
             className="bg-blue-500 text-white p-2 rounded-md"
             onClick={() => {
-              setBodies([]);
+              bodiesRef.current = [];
+              forceUpdate((prev) => prev + 1);
             }}
           >
             Clear
@@ -317,14 +318,14 @@ function App() {
             />
 
             <PhysicsSystem
-              bodies={bodies}
-              setBodies={setBodies}
+              bodiesRef={bodiesRef}
               G={G}
               paused={paused}
               enableCollision={enableCollision}
               restitution={restitution}
+              forceUpdate={forceUpdate}
             />
-            {bodies.map((body, index) => (
+            {bodiesRef.current.map((body, index) => (
               <Body
                 key={index}
                 radius={body.radius}
