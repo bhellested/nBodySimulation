@@ -217,9 +217,9 @@ function App() {
               //adds a single body with random position and velocity
               bodiesRef.current.push({
                 position: [
-                  (Math.random() - 0.5) * 10,
-                  (Math.random() - 0.5) * 10,
-                  (Math.random() - 0.5) * 10,
+                  (Math.random()) * 10,
+                  (Math.random()) * 10,
+                  (Math.random()) * 10,
                 ],
                 velocity: [
                   (Math.random() - 0.5) * 2,
@@ -296,12 +296,12 @@ function App() {
           </div>
         </div>
         <div className="w-full h-full">
-          <Canvas camera={{ position: [0, 0, 20] }}>
+          <Canvas camera={{ position: [20, 20, 20] }}>
             <axesHelper args={[10]} />
             <OrbitControls
               makeDefault
               minDistance={5}
-              maxDistance={100}
+              maxDistance={200}
             />
             <ambientLight intensity={Math.PI / 2} />
             <spotLight
